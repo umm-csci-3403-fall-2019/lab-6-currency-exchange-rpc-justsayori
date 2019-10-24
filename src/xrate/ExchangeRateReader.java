@@ -1,5 +1,8 @@
 package xrate;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.io.*;
 import java.net.URL;
 import java.util.Properties;
@@ -10,6 +13,7 @@ import java.util.Properties;
 public class ExchangeRateReader {
 
     private String accessKey;
+    private String baseUrl;
 
     /**
      * Construct an exchange rate reader using the given base URL. All requests
@@ -30,7 +34,7 @@ public class ExchangeRateReader {
          * provided `baseURL` in a field so it will be accessible later.
          */
 
-        // TODO Your code here
+        this.baseUrl = baseURL;
 
         // Reads the access keys from `etc/access_keys.properties`
         readAccessKeys();
@@ -66,6 +70,33 @@ public class ExchangeRateReader {
         accessKey = properties.getProperty("fixer_io");
     }
 
+    //This method adds a zero to the beginning of a single digit number so the url matches the desired
+    //format when a date has single digit numbers, otherwise turns integer into string
+    public String dateFixer(int date){
+        String newDate;
+        if(date<10) {
+            newDate = "0" + date;
+        } else {
+            newDate = Integer.toString(date);
+        }
+        return newDate;
+    }
+
+    //Encapsulate process of getting a URl and getting the rates JSON object from it
+    public JsonObject walkThroughJSON(String finalURL) throws IOException {
+        try {
+            URL url = new URL(finalURL);
+            InputStream inputStream = url.openStream();
+            InputStreamReader reader = new InputStreamReader(inputStream);
+            return new JsonParser().parse(reader).getAsJsonObject().getAsJsonObject("rates");
+
+        } catch(IOException e) {
+            System.out.println("There was a problem opening the URL. Check if you have the right one");
+            throw(e);
+        }
+    }
+
+
     /**
      * Get the exchange rate for the specified currency against the base
      * currency (the Euro) on the specified date.
@@ -81,11 +112,11 @@ public class ExchangeRateReader {
      * @return the desired exchange rate
      * @throws IOException if there are problems reading from the server
      */
-    public float getExchangeRate(String currencyCode, int year, int month, int day) throws IOException {
-        // TODO Your code here
-
-        // Remove the next line when you've implemented this method.
-        throw new UnsupportedOperationException();
+    public float getExchangeRate(String currencyCode, int year, int month, int day) throws IOException{
+        String fullURL;
+        fullURL = baseUrl + year + "-" + dateFixer(month) + "-" + dateFixer(day) + "?access_key=" + accessKey;
+        JsonObject parser = walkThroughJSON(fullURL);
+        return parser.get(currencyCode).getAsFloat();
     }
 
     /**
@@ -105,12 +136,14 @@ public class ExchangeRateReader {
      * @return the desired exchange rate
      * @throws IOException if there are problems reading from the server
      */
-    public float getExchangeRate(
-            String fromCurrency, String toCurrency,
-            int year, int month, int day) throws IOException {
-        // TODO Your code here
+    public float getExchangeRate(String fromCurrency, String toCurrency, int year,
+                                 int month, int day) throws IOException {
+        String fullURL;
 
-        // Remove the next line when you've implemented this method.
-        throw new UnsupportedOperationException();
+        fullURL = baseUrl + year + "-" + dateFixer(month) + "-" + dateFixer(day) + "?access_key=" + accessKey;
+        JsonObject parser = walkThroughJSON(fullURL);
+        float fromCurr = parser.get(fromCurrency).getAsFloat();
+        float toCurr = parser.get(toCurrency).getAsFloat();
+        return fromCurr/toCurr;
     }
 }
